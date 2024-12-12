@@ -6,6 +6,8 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.RemoteViews
 import androidx.work.*
@@ -21,7 +23,13 @@ class word : AppWidgetProvider() {
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
         // 当第一个小部件被添加时调用
-        scheduleUpdate(context)
+        updateWidgetsWithMessage(
+            context,
+            "加载中...",
+            "正在获取单词数据"
+        )
+        // 加载数据并设置每日更新任务
+        loadDataAndScheduleUpdate(context)
     }
 
     override fun onUpdate(
@@ -30,11 +38,6 @@ class word : AppWidgetProvider() {
         appWidgetIds: IntArray
     ) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
-        
-        // 如果列表为空，触发更新
-        if (wordList.isEmpty()) {
-            scheduleUpdate(context)
-        }
         
         // 更新所有小部件显示
         for (appWidgetId in appWidgetIds) {
@@ -51,21 +54,22 @@ class word : AppWidgetProvider() {
                     AppWidgetManager.INVALID_APPWIDGET_ID
                 )
                 if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                    // 如果列表为空，先触发更新
-                    if (wordList.isEmpty()) {
-                        scheduleUpdate(context)
-                    } else {
-                        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                        val currentIndex = prefs.getInt(PREF_WORD_INDEX, 0)
-                        val nextIndex = (currentIndex + 1) % (wordList.size.coerceAtLeast(1))
-                        prefs.edit().putInt(PREF_WORD_INDEX, nextIndex).apply()
-                        
-                        val appWidgetManager = AppWidgetManager.getInstance(context)
-                        updateAppWidget(context, appWidgetManager, appWidgetId)
-                    }
+                    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    val currentIndex = prefs.getInt(PREF_WORD_INDEX, 0)
+                    val nextIndex = (currentIndex + 1) % (wordList.size.coerceAtLeast(1))
+                    prefs.edit().putInt(PREF_WORD_INDEX, nextIndex).apply()
+                    
+                    val appWidgetManager = AppWidgetManager.getInstance(context)
+                    updateAppWidget(context, appWidgetManager, appWidgetId)
                 }
             }
-            ACTION_REFRESH -> scheduleUpdate(context)
+            ACTION_REFRESH -> {
+                // 启动 MainActivity 来触发数据刷新
+                val intent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+            }
         }
     }
 
@@ -78,6 +82,7 @@ class word : AppWidgetProvider() {
         private const val MIN_BACKOFF_MILLIS = WorkRequest.MIN_BACKOFF_MILLIS
 
         private var wordList = mutableListOf<WordData>()
+        private val scope = CoroutineScope(Dispatchers.Main + Job())
 
         fun getWordList(): List<WordData> = wordList
         fun getWordAt(index: Int): WordData? = wordList.getOrNull(index)
@@ -94,13 +99,6 @@ class word : AppWidgetProvider() {
         private fun scheduleUpdate(context: Context) {
             val workManager = WorkManager.getInstance(context)
             
-            // 显示加载状态
-            updateWidgetsWithMessage(
-                context,
-                "加载中...",
-                "正在获取单词数据"
-            )
-
             // 取消所有旧的任务
             workManager.cancelUniqueWork(WORK_NAME)
 
@@ -108,32 +106,12 @@ class word : AppWidgetProvider() {
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
-            // 创建立即执行的一次性任务
-            val data = workDataOf("force_update" to true)
-            val immediateRequest = OneTimeWorkRequestBuilder<WordUpdateWorker>()
-                .setConstraints(constraints)
-                .setInputData(data)
-                .setBackoffCriteria(
-                    BackoffPolicy.LINEAR,
-                    WorkRequest.MIN_BACKOFF_MILLIS,
-                    TimeUnit.MILLISECONDS
-                )
-                .addTag("${WORK_NAME}_immediate")
-                .build()
-
-            // 创建每日更新任务
+            // 只创建每日更新任务
             val dailyRequest = PeriodicWorkRequestBuilder<WordUpdateWorker>(24, TimeUnit.HOURS)
                 .setConstraints(constraints)
                 .setInitialDelay(calculateInitialDelay(), TimeUnit.MILLISECONDS)
                 .addTag(WORK_NAME)
                 .build()
-
-            // 执行立即任务
-            workManager.enqueueUniqueWork(
-                "${WORK_NAME}_immediate",
-                ExistingWorkPolicy.REPLACE,
-                immediateRequest
-            )
 
             // 启动每日任务
             workManager.enqueueUniquePeriodicWork(
@@ -243,7 +221,7 @@ class word : AppWidgetProvider() {
                     refreshIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-                views.setOnClickPendingIntent(R.id.refresh_button, refreshPendingIntent)
+//                views.setOnClickPendingIntent(R.id.refresh_button, refreshPendingIntent)
 
                 // 设置按钮点击事件
                 val settingsIntent = Intent(context, MainActivity::class.java).apply {
@@ -266,6 +244,40 @@ class word : AppWidgetProvider() {
                 Log.e("WordWidget", "更新小部件失败: ${e.message}", e)
                 e.printStackTrace()
             }
+        }
+
+        private fun loadDataAndScheduleUpdate(context: Context) {
+            scope.launch {
+                try {
+                    // 从数据库加载数据
+                    val repository = WordRepository(context)
+                    val words = withContext(Dispatchers.IO) {
+                        repository.getWords()
+                    }
+                    
+                    // 更新列表和小部件
+                    updateWordList(words)
+                    
+                    // 更新所有小部件
+                    val appWidgetManager = AppWidgetManager.getInstance(context)
+                    val appWidgetIds = appWidgetManager.getAppWidgetIds(
+                        ComponentName(context, word::class.java)
+                    )
+                    if (appWidgetIds.isNotEmpty()) {
+                        updateAllWidgets(context, appWidgetManager, appWidgetIds)
+                    }
+                    
+                    // 设置每日更新任务
+                    scheduleUpdate(context)
+                } catch (e: Exception) {
+                    Log.e("WordWidget", "加载数据失败: ${e.message}", e)
+                }
+            }
+        }
+
+        // 清理协程作用域
+        fun cleanup() {
+            scope.cancel()
         }
     }
 }

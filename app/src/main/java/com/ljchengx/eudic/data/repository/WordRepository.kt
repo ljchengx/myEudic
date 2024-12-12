@@ -55,36 +55,59 @@ class WordRepository(private val context: Context) {
     suspend fun getWordsFromNetwork(): List<WordData> {
         return mutex.withLock {
             withContext(Dispatchers.IO) {
-                try {
-                    Log.d("WordRepository", "Forcing network update")
-                    val response = KtorClient.client.get("${ApiService.BASE_URL}${ApiService.GET_WORD_URL}") {
-                        headers {
-                            append("Authorization", ApiService.AUTH_TOKEN)
-                            append("Accept", "application/json")
-                            append("Content-Type", "application/json")
-                            append("User-Agent", "Mozilla/5.0")
-                            append("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+                var retryCount = 0
+                val maxRetries = 3  // 最大重试次数
+                
+                while (retryCount < maxRetries) {
+                    try {
+                        Log.d("WordRepository", "尝试获取网络数据，第 ${retryCount + 1} 次")
+                        val response = KtorClient.client.get("${ApiService.BASE_URL}${ApiService.GET_WORD_URL}") {
+                            headers {
+                                append("Authorization", ApiService.AUTH_TOKEN)
+                                append("Accept", "application/json")
+                                append("Content-Type", "application/json")
+                                append("User-Agent", "Mozilla/5.0")
+                                append("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+                            }
                         }
+                        
+                        val apiResponse = response.body<ApiResponse<List<WordItem>>>()
+                        Log.d("WordRepository", "获取到 ${apiResponse.data.size} 个单词")
+                        
+                        // 检查空释义的单词数量
+                        val emptyExpCount = apiResponse.data.count { it.exp.isNullOrBlank() }
+                        Log.d("WordRepository", "空释义单词数量：$emptyExpCount")
+                        
+                        if (emptyExpCount > 10) {
+                            Log.w("WordRepository", "空释义单词过多，准备重试")
+                            retryCount++
+                            delay(1000) // 延迟1秒后重试
+                            continue
+                        }
+                        
+                        val processedWords = processWordItems(apiResponse.data)
+                        
+                        // 保存到数据库
+                        val entities = processedWords.map { wordData -> 
+                            WordEntity.fromWordData(wordData)
+                        }
+                        Log.d("WordRepository", "保存 ${entities.size} 个单词到数据库")
+                        wordDao.deleteAllWords()
+                        wordDao.insertWords(entities)
+                        Log.d("WordRepository", "数据库更新成功")
+                        
+                        return@withContext processedWords
+                    } catch (e: Exception) {
+                        Log.e("WordRepository", "获取网络数据失败: ${e.message}", e)
+                        if (retryCount >= maxRetries - 1) {
+                            throw e
+                        }
+                        retryCount++
+                        delay(1000) // 延迟1秒后重试
                     }
-                    
-                    val apiResponse = response.body<ApiResponse<List<WordItem>>>()
-                    Log.d("WordRepository", "Got ${apiResponse.data.size} words from network")
-                    val processedWords = processWordItems(apiResponse.data)
-                    
-                    // 保存到数据库
-                    val entities = processedWords.map { wordData -> 
-                        WordEntity.fromWordData(wordData)
-                    }
-                    Log.d("WordRepository", "Saving ${entities.size} words to database")
-                    wordDao.deleteAllWords()
-                    wordDao.insertWords(entities)
-                    Log.d("WordRepository", "Database updated successfully")
-                    
-                    processedWords
-                } catch (e: Exception) {
-                    Log.e("WordRepository", "Error getting words from network", e)
-                    throw e
                 }
+                
+                throw Exception("获取网络数据失败，已重试 $maxRetries 次")
             }
         }
     }
@@ -94,11 +117,12 @@ class WordRepository(private val context: Context) {
         val threeDaysAgo = LocalDateTime.now().minusDays(3)
         val processedWords = items
             .filter {
-                val wordDate = LocalDateTime.parse(
+                // 过滤掉空释义的单词
+                !it.exp.isNullOrBlank() && 
+                LocalDateTime.parse(
                     it.add_time,
                     DateTimeFormatter.ISO_DATE_TIME
-                )
-                wordDate.isAfter(threeDaysAgo)
+                ).isAfter(threeDaysAgo)
             }
             .sortedByDescending { it.add_time }
             .map {

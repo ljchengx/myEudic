@@ -24,8 +24,8 @@
             android:theme="@style/Theme.AppCompat">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.ljchengx.eudic.ACTION_NEXT_WORD" />
-                <action android:name="com.ljchengx.eudic.ACTION_REFRESH" />
+                <action android:name="android.appwidget.action.APPWIDGET_ENABLED" />
+                <action android:name="android.appwidget.action.APPWIDGET_DISABLED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
