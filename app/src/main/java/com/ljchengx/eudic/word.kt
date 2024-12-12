@@ -85,27 +85,65 @@ class word : AppWidgetProvider() {
         fun isWordListEmpty(): Boolean = wordList.isEmpty()
 
         fun updateWordList(words: List<WordData>) {
+            Log.d("WordWidget", "开始更新单词列表，新数据大小：${words.size}")
             wordList.clear()
             wordList.addAll(words)
+            Log.d("WordWidget", "单词列表更新完成，当前大小：${wordList.size}")
         }
 
         private fun scheduleUpdate(context: Context) {
             val workManager = WorkManager.getInstance(context)
-            workManager.cancelAllWorkByTag(WORK_NAME)
+            
+            // 显示加载状态
+            updateWidgetsWithMessage(
+                context,
+                "加载中...",
+                "正在获取单词数据"
+            )
+
+            // 取消所有旧的任务
+            workManager.cancelUniqueWork(WORK_NAME)
 
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
-            // 创建立即执行的任务，添加强制更新标记
+            // 创建立即执行的一次性任务
             val data = workDataOf("force_update" to true)
             val immediateRequest = OneTimeWorkRequestBuilder<WordUpdateWorker>()
                 .setConstraints(constraints)
                 .setInputData(data)
+                .setBackoffCriteria(
+                    BackoffPolicy.LINEAR,
+                    WorkRequest.MIN_BACKOFF_MILLIS,
+                    TimeUnit.MILLISECONDS
+                )
+                .addTag("${WORK_NAME}_immediate")
+                .build()
+
+            // 创建每日更新任务
+            val dailyRequest = PeriodicWorkRequestBuilder<WordUpdateWorker>(24, TimeUnit.HOURS)
+                .setConstraints(constraints)
+                .setInitialDelay(calculateInitialDelay(), TimeUnit.MILLISECONDS)
                 .addTag(WORK_NAME)
                 .build()
 
-            // 计算下一个凌晨的时间
+            // 执行立即任务
+            workManager.enqueueUniqueWork(
+                "${WORK_NAME}_immediate",
+                ExistingWorkPolicy.REPLACE,
+                immediateRequest
+            )
+
+            // 启动每日任务
+            workManager.enqueueUniquePeriodicWork(
+                WORK_NAME,
+                ExistingPeriodicWorkPolicy.REPLACE,
+                dailyRequest
+            )
+        }
+
+        private fun calculateInitialDelay(): Long {
             val now = Calendar.getInstance()
             val nextRun = Calendar.getInstance().apply {
                 add(Calendar.DAY_OF_YEAR, 1)
@@ -114,31 +152,7 @@ class word : AppWidgetProvider() {
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
             }
-            val initialDelay = nextRun.timeInMillis - now.timeInMillis
-
-            // 创建每日更新任务
-            val dailyWorkRequest = PeriodicWorkRequestBuilder<WordUpdateWorker>(
-                24, TimeUnit.HOURS
-            )
-                .setConstraints(constraints)
-                .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
-                .addTag(WORK_NAME)
-                .build()
-
-            // 启动任务
-            workManager.enqueue(immediateRequest)
-            workManager.enqueueUniquePeriodicWork(
-                WORK_NAME,
-                ExistingPeriodicWorkPolicy.REPLACE,
-                dailyWorkRequest
-            )
-
-            // 显示加载状态
-            updateWidgetsWithMessage(
-                context,
-                "加载中...",
-                "正在获取单词数据"
-            )
+            return nextRun.timeInMillis - now.timeInMillis
         }
 
         internal fun updateAllWidgets(
@@ -147,7 +161,12 @@ class word : AppWidgetProvider() {
             appWidgetIds: IntArray
         ) {
             Log.d("WordWidget", "开始更新所有小部件，数量：${appWidgetIds.size}")
+            if (appWidgetIds.isEmpty()) {
+                Log.w("WordWidget", "没有找到需要更新的小部件")
+                return
+            }
             for (appWidgetId in appWidgetIds) {
+                Log.d("WordWidget", "正在更新小部件 ID: $appWidgetId")
                 updateAppWidget(context, appWidgetManager, appWidgetId)
             }
             Log.d("WordWidget", "所有小部件更新完成")
@@ -200,20 +219,20 @@ class word : AppWidgetProvider() {
                 views.setTextViewText(R.id.meaning_text, currentWord.exp)
                 views.setTextViewText(R.id.word_index, "${currentIndex + 1}/${wordList.size}")
 
+                // 设置下一个按钮点击事件
                 val intent = Intent(context, word::class.java).apply {
                     action = ACTION_NEXT_WORD
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                 }
-
                 val pendingIntent = PendingIntent.getBroadcast(
                     context,
                     appWidgetId,
                     intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-
                 views.setOnClickPendingIntent(R.id.next_button, pendingIntent)
 
+                // 设置刷新按钮点击事件
                 val refreshIntent = Intent(context, word::class.java).apply {
                     action = ACTION_REFRESH
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
@@ -226,15 +245,19 @@ class word : AppWidgetProvider() {
                 )
                 views.setOnClickPendingIntent(R.id.refresh_button, refreshPendingIntent)
 
-                // 添加整个小部件的点击事件
-                val mainIntent = Intent(context, MainActivity::class.java)
-                val mainPendingIntent = PendingIntent.getActivity(
+                // 设置按钮点击事件
+                val settingsIntent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    action = Intent.ACTION_MAIN
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
+                val settingsPendingIntent = PendingIntent.getActivity(
                     context,
                     appWidgetId + 2,
-                    mainIntent,
+                    settingsIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-                views.setOnClickPendingIntent(R.id.widget_layout, mainPendingIntent)
+                views.setOnClickPendingIntent(R.id.settings_button, settingsPendingIntent)
 
                 appWidgetManager.updateAppWidget(appWidgetId, views)
                 Log.d("WordWidget", "小部件 $appWidgetId 更新完成")
