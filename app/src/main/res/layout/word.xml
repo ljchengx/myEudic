@@ -39,14 +39,31 @@
         android:textSize="16sp"
         android:textColor="#E0E0E0" />
 
-    <ImageButton
-        android:id="@+id/next_button"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/check_button_background"
-        android:src="@drawable/ic_check"
-        android:contentDescription="Mark as learned" />
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp">
+
+        <ImageButton
+            android:id="@+id/refresh_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="start|center_vertical"
+            android:background="@drawable/check_button_background"
+            android:src="@android:drawable/ic_popup_sync"
+            android:scaleType="fitCenter"
+            android:padding="6dp"
+            android:contentDescription="Refresh words" />
+
+        <ImageButton
+            android:id="@+id/next_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:background="@drawable/check_button_background"
+            android:src="@drawable/ic_check"
+            android:contentDescription="Mark as learned" />
+
+    </FrameLayout>
 
 </LinearLayout>
