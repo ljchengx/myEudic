@@ -2,6 +2,7 @@ package com.ljchengx.eudic
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.ljchengx.eudic.data.repository.WordRepository
 import kotlinx.coroutines.CoroutineScope
@@ -14,11 +15,14 @@ import kotlinx.coroutines.cancel
 class MainActivity : AppCompatActivity() {
     private val wordRepository by lazy { WordRepository(applicationContext) }
     private val scope = CoroutineScope(Dispatchers.Main + Job())
+    private lateinit var statusText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        statusText = findViewById(R.id.statusText)
+        
         // 初始化时预加载数据
         preloadWordData()
     }
@@ -26,13 +30,14 @@ class MainActivity : AppCompatActivity() {
     private fun preloadWordData() {
         scope.launch {
             try {
-                Log.d("MainActivity", "开始预加载单词数据")
+                statusText.text = "正在更新数据..."
                 withContext(Dispatchers.IO) {
                     wordRepository.getWordsFromNetwork()
                 }
-                Log.d("MainActivity", "单词数据预加载完成")
+                statusText.text = "数据更新成功"
             } catch (e: Exception) {
                 Log.e("MainActivity", "预加载数据失败: ${e.message}", e)
+                statusText.text = "数据更新失败：${e.message}"
             }
         }
     }

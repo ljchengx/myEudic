@@ -65,10 +65,10 @@ class word : AppWidgetProvider() {
             }
             ACTION_REFRESH -> {
                 // 启动 MainActivity 来触发数据刷新
-                val intent = Intent(context, MainActivity::class.java).apply {
+                val mainIntent = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
-                context.startActivity(intent)
+                context.startActivity(mainIntent)
             }
         }
     }
@@ -113,10 +113,10 @@ class word : AppWidgetProvider() {
                 .addTag(WORK_NAME)
                 .build()
 
-            // 启动每日任务
+            // 启动每日任务，使用 UPDATE 策略
             workManager.enqueueUniquePeriodicWork(
                 WORK_NAME,
-                ExistingPeriodicWorkPolicy.REPLACE,
+                ExistingPeriodicWorkPolicy.UPDATE,
                 dailyRequest
             )
         }
@@ -198,32 +198,19 @@ class word : AppWidgetProvider() {
                 views.setTextViewText(R.id.word_index, "${currentIndex + 1}/${wordList.size}")
 
                 // 设置下一个按钮点击事件
-                val intent = Intent(context, word::class.java).apply {
+                val nextIntent = Intent(context, word::class.java).apply {
                     action = ACTION_NEXT_WORD
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                 }
-                val pendingIntent = PendingIntent.getBroadcast(
+                val nextPendingIntent = PendingIntent.getBroadcast(
                     context,
                     appWidgetId,
-                    intent,
+                    nextIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-                views.setOnClickPendingIntent(R.id.next_button, pendingIntent)
+                views.setOnClickPendingIntent(R.id.next_button, nextPendingIntent)
 
-                // 设置刷新按钮点击事件
-                val refreshIntent = Intent(context, word::class.java).apply {
-                    action = ACTION_REFRESH
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                }
-                val refreshPendingIntent = PendingIntent.getBroadcast(
-                    context,
-                    appWidgetId + 1,
-                    refreshIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-//                views.setOnClickPendingIntent(R.id.refresh_button, refreshPendingIntent)
-
-                // 设置按钮点击事件
+                // 设置设置按钮点击事件
                 val settingsIntent = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                     action = Intent.ACTION_MAIN
