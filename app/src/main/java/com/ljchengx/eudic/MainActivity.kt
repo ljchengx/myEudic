@@ -31,9 +31,10 @@ class MainActivity : AppCompatActivity() {
         scope.launch {
             try {
                 statusText.text = "正在更新数据..."
-                withContext(Dispatchers.IO) {
-                    wordRepository.getWordsFromNetwork()
+                val words = withContext(Dispatchers.IO) {
+                    wordRepository.getWords()
                 }
+                Log.d("MainActivity", "数据更新完成，获取到 ${words.size} 个单词")
                 statusText.text = "数据更新成功"
             } catch (e: Exception) {
                 Log.e("MainActivity", "预加载数据失败: ${e.message}", e)

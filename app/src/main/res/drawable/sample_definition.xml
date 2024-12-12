@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="280dp"
+    android:height="60dp"
+    android:viewportWidth="280"
+    android:viewportHeight="60">
+    <text
+        android:textSize="14sp"
+        android:text="n. 权杖; 王权; 君权"
+        android:textColor="#E0E0E0"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+</vector> 

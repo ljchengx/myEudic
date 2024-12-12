@@ -47,8 +47,10 @@ class word : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
+        Log.d("WordWidget", "Received action: ${intent.action}")
         when (intent.action) {
             ACTION_NEXT_WORD -> {
+                Log.d("WordWidget", "处理下一个单词请求，当前列表大小：${wordList.size}")
                 val appWidgetId = intent.getIntExtra(
                     AppWidgetManager.EXTRA_APPWIDGET_ID,
                     AppWidgetManager.INVALID_APPWIDGET_ID
@@ -56,8 +58,10 @@ class word : AppWidgetProvider() {
                 if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
                     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     val currentIndex = prefs.getInt(PREF_WORD_INDEX, 0)
+                    Log.d("WordWidget", "当前索引：$currentIndex，单词列表大小：${wordList.size}")
                     val nextIndex = (currentIndex + 1) % (wordList.size.coerceAtLeast(1))
                     prefs.edit().putInt(PREF_WORD_INDEX, nextIndex).apply()
+                    Log.d("WordWidget", "新索引：$nextIndex")
                     
                     val appWidgetManager = AppWidgetManager.getInstance(context)
                     updateAppWidget(context, appWidgetManager, appWidgetId)
@@ -91,8 +95,10 @@ class word : AppWidgetProvider() {
 
         fun updateWordList(words: List<WordData>) {
             Log.d("WordWidget", "开始更新单词列表，新数据大小：${words.size}")
-            wordList.clear()
-            wordList.addAll(words)
+            synchronized(wordList) {
+                wordList.clear()
+                wordList.addAll(words)
+            }
             Log.d("WordWidget", "单词列表更新完成，当前大小：${wordList.size}")
         }
 
@@ -171,19 +177,28 @@ class word : AppWidgetProvider() {
         ) {
             try {
                 Log.d("WordWidget", "更新小部件 $appWidgetId，当前单词列表大小：${wordList.size}")
+                // 如果列表为空，尝试从数据库重新加载
+                if (wordList.isEmpty()) {
+                    scope.launch {
+                        try {
+                            val repository = WordRepository(context)
+                            val words = withContext(Dispatchers.IO) {
+                                repository.getWords()
+                            }
+                            updateWordList(words)
+                            // 重新调用更新
+                            updateAppWidget(context, appWidgetManager, appWidgetId)
+                            return@launch
+                        } catch (e: Exception) {
+                            Log.e("WordWidget", "重新加载数据失败", e)
+                        }
+                    }
+                    return
+                }
+
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 val currentIndex = prefs.getInt(PREF_WORD_INDEX, 0)
                 Log.d("WordWidget", "当前索引：$currentIndex")
-
-                if (wordList.isEmpty()) {
-                    Log.d("WordWidget", "单词列表为空，显示加载状态")
-                    val views = RemoteViews(context.packageName, R.layout.word)
-                    views.setTextViewText(R.id.word_text, "加载中...")
-                    views.setTextViewText(R.id.meaning_text, "正在获取单词数据")
-                    views.setTextViewText(R.id.word_index, "0/0")
-                    appWidgetManager.updateAppWidget(appWidgetId, views)
-                    return
-                }
 
                 val currentWord = wordList.getOrNull(currentIndex)
                 if (currentWord == null) {
@@ -242,22 +257,36 @@ class word : AppWidgetProvider() {
                         repository.getWords()
                     }
                     
-                    // 更新列表和小部件
-                    updateWordList(words)
-                    
-                    // 更新所有小部件
-                    val appWidgetManager = AppWidgetManager.getInstance(context)
-                    val appWidgetIds = appWidgetManager.getAppWidgetIds(
-                        ComponentName(context, word::class.java)
-                    )
-                    if (appWidgetIds.isNotEmpty()) {
-                        updateAllWidgets(context, appWidgetManager, appWidgetIds)
+                    // 更新小组件显示
+                    if (words.isNotEmpty()) {
+                        updateWordList(words)
+                        val appWidgetManager = AppWidgetManager.getInstance(context)
+                        val appWidgetIds = appWidgetManager.getAppWidgetIds(
+                            ComponentName(context, word::class.java)
+                        )
+                        if (appWidgetIds.isNotEmpty()) {
+                            Log.d("WordWidget", "正在更新小组件显示，单词数量：${words.size}")
+                            updateAllWidgets(context, appWidgetManager, appWidgetIds)
+                        }
+                    } else {
+                        Log.w("WordWidget", "获取到的单词列表为空")
+                        updateWidgetsWithMessage(
+                            context,
+                            "加载失败",
+                            "未获取到单词数据"
+                        )
                     }
                     
                     // 设置每日更新任务
                     scheduleUpdate(context)
                 } catch (e: Exception) {
                     Log.e("WordWidget", "加载数据失败: ${e.message}", e)
+                    // 显示错误状态
+                    updateWidgetsWithMessage(
+                        context,
+                        "加载失败",
+                        "请检查网络连接"
+                    )
                 }
             }
         }
