@@ -17,7 +17,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textSize="22sp"
+            android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF" />
 
@@ -35,34 +35,35 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="8dp"
-        android:textSize="16sp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp"
+        android:textSize="14sp"
+        android:lineSpacingExtra="4dp"
         android:textColor="#E0E0E0" />
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp">
+        android:layout_height="wrap_content">
 
         <ImageButton
             android:id="@+id/refresh_button"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="56dp"
+            android:layout_height="24dp"
             android:layout_gravity="start|center_vertical"
-            android:background="@drawable/check_button_background"
-            android:src="@android:drawable/ic_popup_sync"
+            android:background="@drawable/transparent_button_background"
+            android:src="@drawable/ref"
             android:scaleType="fitCenter"
-            android:padding="6dp"
             android:contentDescription="Refresh words" />
 
         <ImageButton
             android:id="@+id/next_button"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center"
-            android:background="@drawable/check_button_background"
-            android:src="@drawable/ic_check"
-            android:contentDescription="Mark as learned" />
+            android:layout_width="64dp"
+            android:layout_height="32dp"
+            android:layout_gravity="end|center_vertical"
+            android:background="@drawable/transparent_button_background"
+            android:src="@drawable/ic_arrow_right"
+            android:scaleType="fitCenter"
+            android:contentDescription="Next word" />
 
     </FrameLayout>
 
