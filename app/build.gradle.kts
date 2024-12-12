@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    id("kotlin-kapt")
 }
 
 android {
@@ -15,6 +16,16 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Room schema 导出配置
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += mapOf(
+                    "room.schemaLocation" to "$projectDir/schemas",
+                    "room.incremental" to "true"
+                )
+            }
+        }
     }
 
     buildTypes {
@@ -43,23 +54,29 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     
-    // Retrofit 依赖
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    
     // Coroutines 依赖
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     
     // Gson 依赖
     implementation("com.google.code.gson:gson:2.10.1")
     
-    // OkHttp 依赖
-    implementation("com.squareup.okhttp3:logging-interceptor:4.9.0")
+    // Ktor 依赖
+    implementation("io.ktor:ktor-client-android:2.3.7")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-serialization-gson:2.3.7")
+    implementation("io.ktor:ktor-client-logging:2.3.7")
     
-    // Material Icons 依赖
-    implementation("com.google.android.material:material:1.11.0")
+    // Room
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+    
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 }
