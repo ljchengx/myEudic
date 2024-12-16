@@ -17,6 +17,10 @@ import com.ljchengx.eudic.data.db.toWordData
 import com.ljchengx.eudic.word
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.forms.*
+import io.ktor.http.*
+import io.ktor.client.plugins.ResponseException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -24,6 +28,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.time.Duration.Companion.seconds
 
 class WordRepository(private val context: Context) {
     private val wordDao = WordDatabase.getDatabase(context).wordDao()
@@ -69,17 +74,37 @@ class WordRepository(private val context: Context) {
                 while (retryCount < maxRetries) {
                     try {
                         Log.d("WordRepository", "尝试获取网络数据，第 ${retryCount + 1} 次")
-                        val response = KtorClient.client.get("${ApiService.BASE_URL}${ApiService.GET_WORD_URL}") {
-                            headers {
-                                append("Authorization", ApiService.AUTH_TOKEN)
-                                append("Accept", "application/json")
-                                append("Content-Type", "application/json")
-                                append("User-Agent", "Mozilla/5.0")
-                                append("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+                        
+                        // 添加网络请求开始的日志
+                        Log.d("WordRepository", "开始发起网络请求...")
+                        val response = try {
+                            KtorClient.client.get("${ApiService.BASE_URL}${ApiService.GET_WORD_URL}") {
+                                headers {
+                                    append("Authorization", ApiService.AUTH_TOKEN)
+                                    append("Accept", "application/json")
+                                    append("Content-Type", "application/json")
+                                    append("User-Agent", "Mozilla/5.0")
+                                    append("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+                                }
                             }
+                        } catch (e: Exception) {
+                            Log.e("WordRepository", "网络请求失败: ${e.message}")
+                            Log.e("WordRepository", "网络异常类型: ${e.javaClass.simpleName}")
+                            throw e
                         }
                         
-                        val apiResponse = response.body<ApiResponse<List<WordItem>>>()
+                        Log.d("WordRepository", "网络请求完成，状态码: ${response.status.value}")
+                        
+                        val apiResponse = try {
+                            response.body<ApiResponse<List<WordItem>>>()
+                        } catch (e: Exception) {
+                            Log.e("WordRepository", "响应解析失败: ${e.message}")
+                            Log.e("WordRepository", "响应内容: ${response.body<String>()}")
+                            throw e
+                        }
+                        
+                        Log.d("WordRepository", "响应解析完成，状态: ${response.status}")
+                        
                         if (apiResponse.data == null) {
                             Log.e("WordRepository", "API返回的数据为空")
                             retryCount++
@@ -100,6 +125,7 @@ class WordRepository(private val context: Context) {
                             continue
                         }
                         
+                        Log.d("WordRepository", "开始处理单词数据...")
                         val processedWords = processWordItems(apiResponse.data)
                         if (processedWords.isEmpty()) {
                             Log.w("WordRepository", "处理后的单词列表为空，准备重试")
@@ -127,13 +153,32 @@ class WordRepository(private val context: Context) {
                         Log.d("WordRepository", "准备返回处理后的单词列表，大小：${processedWords.size}")
                         return@withContext processedWords
                     } catch (e: Exception) {
-                        Log.e("WordRepository", "获取网络数据失败: ${e.message}", e)
-                        e.printStackTrace()
+                        // 详细记录异常信息
+                        Log.e("WordRepository", "获取网络数据失败: ${e.message}")
+                        Log.e("WordRepository", "异常类型: ${e.javaClass.simpleName}")
+                        Log.e("WordRepository", "堆栈跟踪:", e)
+                        
+                        when (e) {
+                            is java.net.SocketTimeoutException -> {
+                                Log.e("WordRepository", "网络请求超时")
+                            }
+                            is java.net.UnknownHostException -> {
+                                Log.e("WordRepository", "无法解析主机名")
+                            }
+                            is javax.net.ssl.SSLException -> {
+                                Log.e("WordRepository", "SSL/TLS错误")
+                            }
+                            is io.ktor.client.plugins.ResponseException -> {
+                                Log.e("WordRepository", "HTTP错误: ${e.response.status}")
+                            }
+                        }
+                        
                         if (retryCount >= maxRetries - 1) {
                             Log.e("WordRepository", "达到最大重试次数，抛出异常")
                             throw e
                         }
                         retryCount++
+                        Log.d("WordRepository", "准备第 ${retryCount + 1} 次重试...")
                         delay(1000) // 延迟1秒后重试
                     }
                 }

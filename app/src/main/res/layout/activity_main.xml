@@ -44,7 +44,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="欢迎使用每日单词小部件"
+                        android:text="0"
                         android:textAppearance="?attr/textAppearanceHeadlineSmall" />
 
                     <TextView
