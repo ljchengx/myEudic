@@ -3,19 +3,14 @@ package com.ljchengx.eudic
 import android.app.Application
 import androidx.work.Configuration
 import androidx.work.WorkManager
+import com.ljchengx.eudic.data.AppDatabase
 
 class App : Application() {
+    lateinit var database: AppDatabase
+        private set
+
     override fun onCreate() {
         super.onCreate()
-        
-        // 初始化 WorkManager
-        if (!WorkManager.isInitialized()) {
-            WorkManager.initialize(
-                this,
-                Configuration.Builder()
-                    .setMinimumLoggingLevel(android.util.Log.DEBUG)
-                    .build()
-            )
-        }
+        database = AppDatabase.getInstance(this)
     }
-} 
+}

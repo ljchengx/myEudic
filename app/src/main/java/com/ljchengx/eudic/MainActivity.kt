@@ -4,47 +4,61 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.ljchengx.eudic.data.repository.WordRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import com.ljchengx.eudic.network.WordService
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.cancel
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
-    private val wordRepository by lazy { WordRepository(applicationContext) }
-    private val scope = CoroutineScope(Dispatchers.Main + Job())
     private lateinit var statusText: TextView
+    private val wordRepository by lazy {
+        WordRepository(
+            (application as App).database.wordDao(),
+            (application as App).database.requestRecordDao(),
+            WordService()
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         statusText = findViewById(R.id.statusText)
-        
-        // 初始化时预加载数据
-        preloadWordData()
-    }
 
-    private fun preloadWordData() {
-        scope.launch {
+        lifecycleScope.launch {
             try {
-                statusText.text = "正在更新数据..."
-                val words = withContext(Dispatchers.IO) {
-                    wordRepository.getWords()
+                // 刷新并保存数据到数据库
+                wordRepository.refreshWords("133784439026055309")
+                
+                // 从数据库观察数据变化
+                wordRepository.getAllWords().collectLatest { words ->
+                    // 更新UI显示
+                    words.forEach { wordEntity ->
+                        Log.d("WordDB", "Word: ${wordEntity.word}, Exp: ${wordEntity.explanation}")
+                    }
+                    
+                    // 更新状态文本
+                    statusText.text = "已加载 ${words.size} 个单词"
                 }
-                Log.d("MainActivity", "数据更新完成，获取到 ${words.size} 个单词")
-                statusText.text = "数据更新成功"
             } catch (e: Exception) {
-                Log.e("MainActivity", "预加载数据失败: ${e.message}", e)
-                statusText.text = "数据更新失败：${e.message}"
+                Log.e("WordAPI", "Error fetching words", e)
+                statusText.text = "加载失败: ${e.message}"
             }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        scope.cancel()
+    }
+
+    private suspend fun checkLastRequestTime() {
+        wordRepository.getLastRequestRecord()?.let { record ->
+            val lastRequestTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                .format(Date(record.lastRequestTime))
+            Log.d("WordDB", "Last request time: $lastRequestTime")
+        }
     }
 } 
