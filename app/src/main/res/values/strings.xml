@@ -1,6 +1,14 @@
 <resources>
-    <string name="app_name">eudic</string>
-    <string name="appwidget_text">EXAMPLE</string>
-    <string name="add_widget">Add widget</string>
-    <string name="app_widget_description">This is an app widget description</string>
+    <string name="app_name">Eudic</string>
+    <string name="title_words">单词本</string>
+    <string name="title_profile">我的</string>
+    <string name="no_words">暂无单词</string>
+    <string name="token_setting">Token 设置</string>
+    <string name="widget_setting">小组件设置</string>
+    <string name="about_us">关于我们</string>
+    
+    <!-- Widget related strings -->
+    <string name="app_widget_description">显示单词卡片小组件</string>
+    <string name="add_widget">添加小组件</string>
+    <string name="appwidget_text">单词卡片</string>
 </resources>

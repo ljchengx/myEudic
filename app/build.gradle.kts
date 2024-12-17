@@ -86,4 +86,16 @@ dependencies {
     
     // Room 测试支持
     testImplementation("androidx.room:room-testing:$roomVersion")
+    
+    // Navigation
+    implementation("androidx.navigation:navigation-fragment-ktx:2.7.6")
+    implementation("androidx.navigation:navigation-ui-ktx:2.7.6")
+    
+    // Material Design
+    implementation("com.google.android.material:material:1.11.0")
+    
+    // Lifecycle
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
 }
