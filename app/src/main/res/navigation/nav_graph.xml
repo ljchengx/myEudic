@@ -2,27 +2,25 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/navigation_words">
+    app:startDestination="@id/wordsFragment">
 
     <fragment
-        android:id="@+id/navigation_words"
+        android:id="@+id/wordsFragment"
         android:name="com.ljchengx.eudic.ui.words.WordsFragment"
-        android:label="@string/title_words">
+        android:label="单词列表" />
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="com.ljchengx.eudic.ui.profile.ProfileFragment"
+        android:label="个人中心">
         <action
-            android:id="@+id/action_words_to_profile"
-            app:destination="@id/navigation_profile"
-            app:enterAnim="@anim/nav_default_enter_anim"
-            app:exitAnim="@anim/nav_default_exit_anim" />
+            android:id="@+id/action_profileFragment_to_tokenSettingFragment"
+            app:destination="@id/tokenSettingFragment" />
     </fragment>
 
     <fragment
-        android:id="@+id/navigation_profile"
-        android:name="com.ljchengx.eudic.ui.profile.ProfileFragment"
-        android:label="@string/title_profile">
-        <action
-            android:id="@+id/action_profile_to_words"
-            app:destination="@id/navigation_words"
-            app:enterAnim="@anim/nav_default_enter_anim"
-            app:exitAnim="@anim/nav_default_exit_anim" />
-    </fragment>
+        android:id="@+id/tokenSettingFragment"
+        android:name="com.ljchengx.eudic.ui.token.TokenSettingFragment"
+        android:label="Token设置" />
+
 </navigation> 

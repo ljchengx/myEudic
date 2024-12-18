@@ -9,18 +9,19 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.ljchengx.eudic.data.entity.WordEntity
+import com.elvishew.xlog.XLog
+import com.google.android.material.snackbar.Snackbar
 import com.ljchengx.eudic.databinding.FragmentWordsBinding
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class WordsFragment : Fragment() {
+
     private var _binding: FragmentWordsBinding? = null
     private val binding get() = _binding!!
     private val viewModel: WordsViewModel by viewModels()
-    private lateinit var wordsAdapter: WordsAdapter
+    private lateinit var adapter: WordAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -33,46 +34,55 @@ class WordsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupRecyclerView()
-        setupRefreshButton()
-        observeWords()
-        observeRefreshState()
+        setupViews()
+        observeViewModel()
     }
 
-    private fun setupRecyclerView() {
-        wordsAdapter = WordsAdapter { word ->
-            viewModel.deleteWord(word)
-        }
-        binding.wordList.apply {
-            adapter = wordsAdapter
-            layoutManager = LinearLayoutManager(requireContext())
+    private fun setupViews() {
+        adapter = WordAdapter(
+            onDeleteClick = { word ->
+                viewModel.deleteWord(word)
+                Snackbar.make(binding.root, "已删除: $word", Snackbar.LENGTH_SHORT)
+                    .setAction("撤销") {
+                        // TODO: 实现撤销功能
+                    }
+                    .show()
+            }
+        )
+
+        binding.recyclerView.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = this@WordsFragment.adapter
             addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
         }
-    }
 
-    private fun setupRefreshButton() {
         binding.refreshButton.setOnClickListener {
-            viewModel.refreshWords()
+            refreshWords()
         }
     }
 
-    private fun observeWords() {
-        viewModel.words.observe(viewLifecycleOwner) { words: List<WordEntity> ->
-            wordsAdapter.submitList(words)
-        }
-    }
-
-    private fun observeRefreshState() {
+    private fun refreshWords() {
+        showLoading(true)
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.isRefreshing.collectLatest { isRefreshing ->
-                binding.refreshButton.isEnabled = !isRefreshing
-                if (isRefreshing) {
-                    binding.refreshButton.animate()
-                        .rotation(binding.refreshButton.rotation + 360f)
-                        .setDuration(1000)
-                        .start()
-                }
+            try {
+                viewModel.refreshWords()
+                Snackbar.make(binding.root, "刷新成功", Snackbar.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                XLog.e("刷新失败", e)
+                Snackbar.make(binding.root, "刷新失败: ${e.message}", Snackbar.LENGTH_SHORT).show()
+            } finally {
+                showLoading(false)
             }
+        }
+    }
+
+    private fun showLoading(show: Boolean) {
+        binding.loadingView.root.visibility = if (show) View.VISIBLE else View.GONE
+    }
+
+    private fun observeViewModel() {
+        viewModel.words.observe(viewLifecycleOwner) { words ->
+            adapter.submitList(words)
         }
     }
 

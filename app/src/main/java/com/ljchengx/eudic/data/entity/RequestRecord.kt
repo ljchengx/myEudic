@@ -8,5 +8,6 @@ data class RequestRecord(
     @PrimaryKey
     val id: Int = 1, // 只需要一条记录
     val lastRequestTime: Long, // 使用时间戳
-    val userId: String // 用户ID
+    val userId: String, // 用户ID
+    val token: String = "" // API Token
 ) 
