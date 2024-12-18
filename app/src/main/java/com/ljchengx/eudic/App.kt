@@ -1,16 +1,7 @@
 package com.ljchengx.eudic
 
 import android.app.Application
-import androidx.work.Configuration
-import androidx.work.WorkManager
-import com.ljchengx.eudic.data.AppDatabase
+import dagger.hilt.android.HiltAndroidApp
 
-class App : Application() {
-    lateinit var database: AppDatabase
-        private set
-
-    override fun onCreate() {
-        super.onCreate()
-        database = AppDatabase.getInstance(this)
-    }
-}
+@HiltAndroidApp
+class App : Application()

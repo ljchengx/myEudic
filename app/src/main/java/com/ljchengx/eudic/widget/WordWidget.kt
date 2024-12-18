@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
-import com.ljchengx.eudic.App
 import com.ljchengx.eudic.MainActivity
 import com.ljchengx.eudic.R
 import com.ljchengx.eudic.data.entity.WordEntity
@@ -31,16 +30,7 @@ class WordWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        scope.launch {
-            // 从数据库获取单词
-            val wordDao = (context.applicationContext as App).database.wordDao()
-            words = wordDao.getAllWords().firstOrNull() ?: emptyList()
-            
-            // 更新所有小组件
-            appWidgetIds.forEach { appWidgetId ->
-                updateAppWidget(context, appWidgetManager, appWidgetId)
-            }
-        }
+        updateWidgetData(context, appWidgetManager, appWidgetIds)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -55,11 +45,44 @@ class WordWidget : AppWidgetProvider() {
                     val appWidgetIds = appWidgetManager.getAppWidgetIds(
                         intent.component
                     )
-                    appWidgetIds.forEach { appWidgetId ->
-                        updateAppWidget(context, appWidgetManager, appWidgetId)
-                    }
+                    updateWidgetViews(context, appWidgetManager, appWidgetIds)
                 }
             }
+            AppWidgetManager.ACTION_APPWIDGET_UPDATE -> {
+                // 强制更新数据
+                val appWidgetIds = intent.getIntArrayExtra(
+                    AppWidgetManager.EXTRA_APPWIDGET_IDS
+                ) ?: return
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                updateWidgetData(context, appWidgetManager, appWidgetIds)
+            }
+        }
+    }
+
+    private fun updateWidgetData(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
+        scope.launch {
+            // 从数据库获取单词
+            words = WordWidgetManager.getAllWords(context).firstOrNull() ?: emptyList()
+            // 重置索引
+            if (currentWordIndex >= words.size) {
+                currentWordIndex = 0
+            }
+            // 更新所有小组件
+            updateWidgetViews(context, appWidgetManager, appWidgetIds)
+        }
+    }
+
+    private fun updateWidgetViews(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
+        appWidgetIds.forEach { appWidgetId ->
+            updateAppWidget(context, appWidgetManager, appWidgetId)
         }
     }
 

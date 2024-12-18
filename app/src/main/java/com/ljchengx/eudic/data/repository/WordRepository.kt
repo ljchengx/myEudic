@@ -6,8 +6,11 @@ import com.ljchengx.eudic.data.entity.RequestRecord
 import com.ljchengx.eudic.data.entity.WordEntity
 import com.ljchengx.eudic.network.WordService
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class WordRepository(
+@Singleton
+class WordRepository @Inject constructor(
     private val wordDao: WordDao,
     private val requestRecordDao: RequestRecordDao,
     private val wordService: WordService
@@ -38,5 +41,17 @@ class WordRepository(
 
     suspend fun getLastRequestRecord(): RequestRecord? {
         return requestRecordDao.getLastRequestRecord()
+    }
+
+    suspend fun deleteWord(word: String) {
+        wordDao.deleteWord(word)
+    }
+
+    suspend fun getWordByName(word: String): WordEntity? {
+        return wordDao.getWordByName(word)
+    }
+
+    suspend fun deleteAllWords() {
+        wordDao.deleteAllWords()
     }
 } 

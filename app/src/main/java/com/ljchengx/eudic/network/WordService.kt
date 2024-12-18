@@ -11,7 +11,7 @@ class WordService {
     companion object {
         private const val AUTH_TOKEN = "NIS kCIT/cTUpouzWdOYkx+RZZ16aUHgyteYF9ZoFVWZe6EUQKkb6vGjmw=="
         private const val MAX_EMPTY_EXP_COUNT = 8
-        private const val MAX_RETRY_TIMES = 3  // 最大重试次数，防止无限循环
+        private const val MAX_RETRY_TIMES = 5 // 最大重试次数，防止无限循环
     }
 
     suspend fun getWords(userId: String): WordResponse {
