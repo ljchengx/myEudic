@@ -2,6 +2,7 @@ package com.ljchengx.eudic.network
 
 import com.elvishew.xlog.XLog
 import com.ljchengx.eudic.data.WordResponse
+import com.ljchengx.eudic.network.model.WordbookResponse
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -50,6 +51,13 @@ class WordService @Inject constructor() {
         return client.get("https://api.frdic.com/api/open/v1/studylist/words/$userId") {
             parameter("language", "en")
             header(HttpHeaders.Authorization, token)
+        }.body()
+    }
+
+    suspend fun getWordbooks(token: String): WordbookResponse {
+        return client.get("https://api.frdic.com/api/open/v1/studylist/category") {
+            parameter("language", "en")
+            header("Authorization", token)
         }.body()
     }
 } 

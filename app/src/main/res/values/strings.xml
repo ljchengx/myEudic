@@ -6,6 +6,7 @@
     <string name="token_setting">Token 设置</string>
     <string name="widget_setting">小组件设置</string>
     <string name="about_us">关于我们</string>
+    <string name="wordbook_setting">单词本管理</string>
     
     <!-- Widget related strings -->
     <string name="app_widget_description">显示单词卡片小组件</string>

@@ -7,7 +7,14 @@
     <fragment
         android:id="@+id/wordsFragment"
         android:name="com.ljchengx.eudic.ui.words.WordsFragment"
-        android:label="单词列表" />
+        android:label="单词列表">
+        <action
+            android:id="@+id/action_wordsFragment_to_wordbookSettingFragment"
+            app:destination="@id/wordbookSettingFragment" />
+        <action
+            android:id="@+id/action_wordsFragment_to_tokenSettingFragment"
+            app:destination="@id/tokenSettingFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/profileFragment"
@@ -16,11 +23,23 @@
         <action
             android:id="@+id/action_profileFragment_to_tokenSettingFragment"
             app:destination="@id/tokenSettingFragment" />
+        <action
+            android:id="@+id/action_profileFragment_to_wordbookSettingFragment"
+            app:destination="@id/wordbookSettingFragment" />
     </fragment>
 
     <fragment
         android:id="@+id/tokenSettingFragment"
         android:name="com.ljchengx.eudic.ui.token.TokenSettingFragment"
         android:label="Token设置" />
+
+    <fragment
+        android:id="@+id/wordbookSettingFragment"
+        android:name="com.ljchengx.eudic.ui.wordbook.WordbookSettingFragment"
+        android:label="单词本管理">
+        <action
+            android:id="@+id/action_wordbookSettingFragment_to_tokenSettingFragment"
+            app:destination="@id/tokenSettingFragment" />
+    </fragment>
 
 </navigation> 

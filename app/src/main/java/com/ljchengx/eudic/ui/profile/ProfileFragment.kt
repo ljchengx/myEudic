@@ -60,6 +60,10 @@ class ProfileFragment : Fragment() {
             // TODO: 实现头像更换功能
         }
 
+        binding.wordbookSetting.setOnClickListener {
+            findNavController().navigate(R.id.action_profileFragment_to_wordbookSettingFragment)
+        }
+
         binding.widgetSetting.setOnClickListener {
             // TODO: 实现小组件设置
         }

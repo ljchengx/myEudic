@@ -3,8 +3,10 @@ package com.ljchengx.eudic.data.repository
 import com.elvishew.xlog.XLog
 import com.ljchengx.eudic.data.dao.RequestRecordDao
 import com.ljchengx.eudic.data.dao.WordDao
+import com.ljchengx.eudic.data.dao.WordbookDao
 import com.ljchengx.eudic.data.entity.RequestRecord
 import com.ljchengx.eudic.data.entity.WordEntity
+import com.ljchengx.eudic.data.entity.WordbookEntity
 import com.ljchengx.eudic.network.WordService
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -14,12 +16,21 @@ import javax.inject.Singleton
 class WordRepository @Inject constructor(
     private val wordDao: WordDao,
     private val requestRecordDao: RequestRecordDao,
+    private val wordbookDao: WordbookDao,
     private val wordService: WordService
 ) {
     fun getAllWords(): Flow<List<WordEntity>> = wordDao.getAllWords()
 
-    suspend fun refreshWords(userId: String) {
-        XLog.d("开始刷新单词列表")
+    fun getAllWordbooks(): Flow<List<WordbookEntity>> = wordbookDao.getAllWordbooks()
+
+    suspend fun getSelectedWordbook(): WordbookEntity? = wordbookDao.getSelectedWordbook()
+
+    suspend fun selectWordbook(wordbookId: String) {
+        wordbookDao.selectWordbook(wordbookId)
+    }
+
+    suspend fun refreshWordbooks() {
+        XLog.d("开始刷新单词本列表")
         val record = requestRecordDao.getLastRequestRecord()
         if (record == null) {
             XLog.e("未找到请求记录，请先设置Token")
@@ -33,7 +44,68 @@ class WordRepository @Inject constructor(
         }
         
         XLog.d("获取到Token，开始请求API")
-        val response = wordService.getWords(userId, token)
+        val response = wordService.getWordbooks(token)
+        
+        XLog.d("API请求成功，开始保存单词本数据")
+        // 获取当前选中的单词本
+        val selectedWordbook = wordbookDao.getSelectedWordbook()
+        
+        // 保存单词本数据，保持选中状态
+        val wordbookEntities = response.data.map { item ->
+            WordbookEntity(
+                id = item.id,
+                language = item.language,
+                name = item.name,
+                addTime = item.add_time,
+                isSelected = selectedWordbook?.id == item.id,
+                updateTime = System.currentTimeMillis()
+            )
+        }
+
+        // 如果没有选中的单词本，选择第一个
+        if (selectedWordbook == null && wordbookEntities.isNotEmpty()) {
+            XLog.d("没有选中的单词本，选择第一个")
+            val updatedEntities = wordbookEntities.mapIndexed { index, entity ->
+                entity.copy(isSelected = index == 0)
+            }
+            wordbookDao.insertWordbooks(updatedEntities)
+        }
+        // 如果之前选中的单词本不在新列表中，选择第一个单词本
+        else if (selectedWordbook != null && !response.data.any { it.id == selectedWordbook.id }) {
+            XLog.d("之前选中的单词本不在新列表中，选择第一个单词本")
+            val updatedEntities = wordbookEntities.mapIndexed { index, entity ->
+                entity.copy(isSelected = index == 0)
+            }
+            wordbookDao.insertWordbooks(updatedEntities)
+        } else {
+            wordbookDao.insertWordbooks(wordbookEntities)
+        }
+        
+        XLog.d("成功保存 ${wordbookEntities.size} 个单词本")
+    }
+
+    suspend fun refreshWords() {
+        XLog.d("开始刷新单词列表")
+        val record = requestRecordDao.getLastRequestRecord()
+        if (record == null) {
+            XLog.e("未找到请求记录，请先设置Token")
+            throw IllegalStateException("Token not found")
+        }
+        
+        val token = record.token
+        if (token.isBlank()) {
+            XLog.e("Token为空，请先设置Token")
+            throw IllegalStateException("Token is empty")
+        }
+
+        val selectedWordbook = wordbookDao.getSelectedWordbook()
+        if (selectedWordbook == null) {
+            XLog.e("未选择单词本")
+            throw IllegalStateException("No wordbook selected")
+        }
+        
+        XLog.d("获取到Token和单词本ID，开始请求API")
+        val response = wordService.getWords(selectedWordbook.id, token)
         
         XLog.d("API请求成功，开始保存单词数据")
         // 保存单词数据
