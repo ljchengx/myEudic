@@ -37,7 +37,6 @@ class WordbookSettingFragment : Fragment() {
         setupViews()
         setupRecyclerView()
         observeViewModel()
-        refreshWordbooks()
     }
 
     private fun setupViews() {
