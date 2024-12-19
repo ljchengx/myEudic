@@ -70,7 +70,7 @@ class TokenSettingFragment : Fragment() {
     private fun saveToken() {
         val token = binding.tokenInput.text?.toString()?.trim()
         if (token.isNullOrBlank()) {
-            binding.tokenInputLayout.error = "Token不能为空"
+            Snackbar.make(binding.root, "Token不能为空", Snackbar.LENGTH_SHORT).show()
             return
         }
 

@@ -9,10 +9,13 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.ljchengx.eudic.databinding.FragmentWidgetSettingBinding
 import com.ljchengx.eudic.widget.WordWidget
+import com.ljchengx.eudic.data.model.WidgetSettings
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -22,6 +25,7 @@ class WidgetSettingFragment : Fragment() {
     private var _binding: FragmentWidgetSettingBinding? = null
     private val binding get() = _binding!!
     private val viewModel: WidgetSettingViewModel by viewModels()
+    private var isSettingInitialized = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -34,7 +38,6 @@ class WidgetSettingFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         setupToolbar()
         setupListeners()
         observeSettings()
@@ -47,8 +50,8 @@ class WidgetSettingFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        binding.filterDaysGroup.setOnCheckedChangeListener { group, checkedId ->
-            if (group.isPressed) {  // 只有用户操作才触发
+        binding.filterDaysGroup.addOnButtonCheckedListener { group, checkedId, isChecked ->
+            if (isChecked && isSettingInitialized) {  // 只在初始化完成后处理选中事件
                 val days = when (checkedId) {
                     binding.oneDay.id -> 1
                     binding.twoDays.id -> 2
@@ -61,14 +64,14 @@ class WidgetSettingFragment : Fragment() {
         }
 
         binding.randomOrderSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
-            if (buttonView.isPressed) {  // 只有用户操作才触发
+            if (buttonView.isPressed && isSettingInitialized) {  // 只在初始化完成后处理用户操作
                 viewModel.updateRandomOrder(isChecked)
                 updateWidget()
             }
         }
 
         binding.hideExplanationSwitch.setOnCheckedChangeListener { buttonView, isChecked ->
-            if (buttonView.isPressed) {  // 只有用户操作才触发
+            if (buttonView.isPressed && isSettingInitialized) {  // 只在初始化完成后处理用户操作
                 viewModel.updateHideExplanation(isChecked)
                 updateWidget()
             }
@@ -77,34 +80,29 @@ class WidgetSettingFragment : Fragment() {
 
     private fun observeSettings() {
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.settings.collect { settings ->
-                // 更新UI状态，但不触发监听器
-                binding.filterDaysGroup.setOnCheckedChangeListener(null)
-                binding.randomOrderSwitch.setOnCheckedChangeListener(null)
-                binding.hideExplanationSwitch.setOnCheckedChangeListener(null)
-
-                // 更新选中状态
-                val radioButton = when (settings.filterDays) {
-                    1 -> binding.oneDay
-                    2 -> binding.twoDays
-                    3 -> binding.threeDays
-                    else -> binding.oneDay
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.settings.collect { settings ->
+                    isSettingInitialized = false
+                    applySettings(settings)
+                    isSettingInitialized = true
                 }
-                if (!radioButton.isChecked) {
-                    radioButton.isChecked = true
-                }
-
-                if (binding.randomOrderSwitch.isChecked != settings.isRandomOrder) {
-                    binding.randomOrderSwitch.isChecked = settings.isRandomOrder
-                }
-                if (binding.hideExplanationSwitch.isChecked != settings.hideExplanation) {
-                    binding.hideExplanationSwitch.isChecked = settings.hideExplanation
-                }
-
-                // 重新设置监听器
-                setupListeners()
             }
         }
+    }
+
+    private fun applySettings(settings: WidgetSettings) {
+        // 设置过滤天数
+        val buttonId = when (settings.filterDays) {
+            1 -> binding.oneDay.id
+            2 -> binding.twoDays.id
+            3 -> binding.threeDays.id
+            else -> binding.oneDay.id
+        }
+        binding.filterDaysGroup.check(buttonId)
+
+        // 设置其他开关状态
+        binding.randomOrderSwitch.isChecked = settings.isRandomOrder
+        binding.hideExplanationSwitch.isChecked = settings.hideExplanation
     }
 
     private fun updateWidget() {

@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class WordsFragment : Fragment() {
+
     private var _binding: FragmentWordsBinding? = null
     private val binding get() = _binding!!
     private val viewModel: WordsViewModel by viewModels()
@@ -37,7 +38,6 @@ class WordsFragment : Fragment() {
         setupViews()
         setupRecyclerView()
         observeViewModel()
-        refreshWords()
     }
 
     private fun setupViews() {
@@ -51,12 +51,28 @@ class WordsFragment : Fragment() {
         binding.recyclerView.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = wordsAdapter
+            // 添加分割线
+            addItemDecoration(object : androidx.recyclerview.widget.RecyclerView.ItemDecoration() {
+                override fun getItemOffsets(
+                    outRect: android.graphics.Rect,
+                    view: View,
+                    parent: androidx.recyclerview.widget.RecyclerView,
+                    state: androidx.recyclerview.widget.RecyclerView.State
+                ) {
+                    val position = parent.getChildAdapterPosition(view)
+                    outRect.left = 0
+                    outRect.right = 0
+                    outRect.top = if (position == 0) 0 else 12
+                    outRect.bottom = if (position == parent.adapter?.itemCount?.minus(1)) 12 else 0
+                }
+            })
         }
     }
 
     private fun observeViewModel() {
         viewModel.words.observe(viewLifecycleOwner) { words ->
             wordsAdapter.submitList(words)
+            binding.wordCount.text = "${words.size}词"
         }
 
         viewModel.currentWordbookName.observe(viewLifecycleOwner) { name ->

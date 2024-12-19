@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ljchengx.eudic.data.model.WidgetSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -15,36 +15,28 @@ class WidgetSettingViewModel @Inject constructor(
     private val widgetSettingsRepository: WidgetSettingsRepository
 ) : ViewModel() {
 
-    private val _settings = MutableStateFlow(WidgetSettings())
-    val settings: StateFlow<WidgetSettings> = _settings.asStateFlow()
-
-    init {
-        loadSettings()
-    }
-
-    private fun loadSettings() {
-        viewModelScope.launch {
-            widgetSettingsRepository.getSettings().collect { settings ->
-                _settings.value = settings
-            }
-        }
-    }
+    val settings: StateFlow<WidgetSettings> = widgetSettingsRepository.getSettings()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = WidgetSettings()
+        )
 
     fun updateFilterDays(days: Int) {
         viewModelScope.launch {
-            widgetSettingsRepository.updateSettings(_settings.value.copy(filterDays = days))
+            widgetSettingsRepository.updateSettings(settings.value.copy(filterDays = days))
         }
     }
 
     fun updateRandomOrder(isRandom: Boolean) {
         viewModelScope.launch {
-            widgetSettingsRepository.updateSettings(_settings.value.copy(isRandomOrder = isRandom))
+            widgetSettingsRepository.updateSettings(settings.value.copy(isRandomOrder = isRandom))
         }
     }
 
     fun updateHideExplanation(hide: Boolean) {
         viewModelScope.launch {
-            widgetSettingsRepository.updateSettings(_settings.value.copy(hideExplanation = hide))
+            widgetSettingsRepository.updateSettings(settings.value.copy(hideExplanation = hide))
         }
     }
 } 

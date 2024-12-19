@@ -9,7 +9,6 @@ import com.ljchengx.eudic.data.entity.WordEntity
 import com.ljchengx.eudic.databinding.ItemWordBinding
 
 class WordAdapter(
-    private val onDeleteClick: (String) -> Unit
 ) : ListAdapter<WordEntity, WordAdapter.WordViewHolder>(WordDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WordViewHolder {
@@ -33,9 +32,6 @@ class WordAdapter(
             binding.apply {
                 wordText.text = word.word
                 explanationText.text = word.explanation
-                deleteButton.setOnClickListener {
-                    onDeleteClick(word.word)
-                }
             }
         }
     }

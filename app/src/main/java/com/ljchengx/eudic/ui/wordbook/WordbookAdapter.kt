@@ -1,6 +1,7 @@
 package com.ljchengx.eudic.ui.wordbook
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -63,7 +64,7 @@ class WordbookAdapter(
 
         fun bind(wordbook: WordbookEntity) {
             binding.wordbookName.text = wordbook.name
-            binding.wordbookRadio.isChecked = wordbook.id == selectedWordbookId
+            binding.selectedIcon.visibility = if (wordbook.id == selectedWordbookId) View.VISIBLE else View.GONE
         }
     }
 }

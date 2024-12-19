@@ -20,8 +20,7 @@ class WordsAdapter : ListAdapter<WordEntity, WordsAdapter.ViewHolder>(WordDiffCa
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val word = getItem(position)
-        holder.bind(word)
+        holder.bind(getItem(position))
     }
 
     inner class ViewHolder(
@@ -29,8 +28,12 @@ class WordsAdapter : ListAdapter<WordEntity, WordsAdapter.ViewHolder>(WordDiffCa
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(word: WordEntity) {
-            binding.wordText.text = word.word
-            binding.explanationText.text = word.explanation
+            binding.apply {
+                // 提取单词本身（去除音标部分）
+                val wordText = word.word.split(" /").firstOrNull() ?: word.word
+                binding.wordText.text = wordText
+                binding.explanationText.text = word.explanation
+            }
         }
     }
 }
