@@ -65,7 +65,7 @@ class ProfileFragment : Fragment() {
         }
 
         binding.widgetSetting.setOnClickListener {
-            // TODO: 实现小组件设置
+            findNavController().navigate(R.id.action_profileFragment_to_widgetSettingFragment)
         }
 
         binding.aboutUs.setOnClickListener {

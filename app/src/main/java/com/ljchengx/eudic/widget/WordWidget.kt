@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.view.View
 import android.widget.RemoteViews
 import com.ljchengx.eudic.MainActivity
 import com.ljchengx.eudic.R
@@ -21,8 +22,10 @@ class WordWidget : AppWidgetProvider() {
     
     companion object {
         const val ACTION_NEXT_WORD = "com.ljchengx.eudic.NEXT_WORD"
+        const val ACTION_TOGGLE_EXPLANATION = "com.ljchengx.eudic.TOGGLE_EXPLANATION"
         private var currentWordIndex = 0
         private var words = listOf<WordEntity>()
+        private var isExplanationVisible = false
     }
 
     override fun onUpdate(
@@ -38,9 +41,9 @@ class WordWidget : AppWidgetProvider() {
         
         when (intent.action) {
             ACTION_NEXT_WORD -> {
-                // 显示下一个单词
                 if (words.isNotEmpty()) {
                     currentWordIndex = (currentWordIndex + 1) % words.size
+                    isExplanationVisible = false // 重置解析显示状态
                     val appWidgetManager = AppWidgetManager.getInstance(context)
                     val appWidgetIds = appWidgetManager.getAppWidgetIds(
                         intent.component
@@ -48,8 +51,15 @@ class WordWidget : AppWidgetProvider() {
                     updateWidgetViews(context, appWidgetManager, appWidgetIds)
                 }
             }
+            ACTION_TOGGLE_EXPLANATION -> {
+                isExplanationVisible = !isExplanationVisible
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                val appWidgetIds = appWidgetManager.getAppWidgetIds(
+                    intent.component
+                )
+                updateWidgetViews(context, appWidgetManager, appWidgetIds)
+            }
             AppWidgetManager.ACTION_APPWIDGET_UPDATE -> {
-                // 强制更新数据
                 val appWidgetIds = intent.getIntArrayExtra(
                     AppWidgetManager.EXTRA_APPWIDGET_IDS
                 ) ?: return
@@ -65,12 +75,16 @@ class WordWidget : AppWidgetProvider() {
         appWidgetIds: IntArray
     ) {
         scope.launch {
+            // 获取设置
+            val settings = WordWidgetManager.getSettings(context)
+            
             // 从数据库获取单词
             words = WordWidgetManager.getAllWords(context).firstOrNull() ?: emptyList()
-            // 重置索引
+            // 重置索引和解析显示状态
             if (currentWordIndex >= words.size) {
                 currentWordIndex = 0
             }
+            isExplanationVisible = false
             // 更新所有小组件
             updateWidgetViews(context, appWidgetManager, appWidgetIds)
         }
@@ -81,15 +95,20 @@ class WordWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        appWidgetIds.forEach { appWidgetId ->
-            updateAppWidget(context, appWidgetManager, appWidgetId)
+        scope.launch {
+            val settings = WordWidgetManager.getSettings(context)
+            
+            appWidgetIds.forEach { appWidgetId ->
+                updateAppWidget(context, appWidgetManager, appWidgetId, settings)
+            }
         }
     }
 
     private fun updateAppWidget(
         context: Context,
         appWidgetManager: AppWidgetManager,
-        appWidgetId: Int
+        appWidgetId: Int,
+        settings: com.ljchengx.eudic.data.model.WidgetSettings?
     ) {
         val views = RemoteViews(context.packageName, R.layout.word)
         
@@ -98,7 +117,19 @@ class WordWidget : AppWidgetProvider() {
             
             // 更新UI
             views.setTextViewText(R.id.word_text, currentWord.word)
-            views.setTextViewText(R.id.meaning_text, currentWord.explanation)
+            
+            // 根据设置和状态显示解析
+            if (settings?.hideExplanation == true) {
+                // 如果开启了隐藏解析功能
+                views.setViewVisibility(R.id.show_explanation_button, View.VISIBLE)
+                views.setTextViewText(R.id.meaning_text, 
+                    if (isExplanationVisible) currentWord.explanation else "")
+            } else {
+                // 如果没有开启隐藏解析功能
+                views.setViewVisibility(R.id.show_explanation_button, View.GONE)
+                views.setTextViewText(R.id.meaning_text, currentWord.explanation)
+            }
+            
             views.setTextViewText(
                 R.id.word_index,
                 "${currentWordIndex + 1}/${words.size}"
@@ -108,12 +139,19 @@ class WordWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.word_text, "No Words")
             views.setTextViewText(R.id.meaning_text, "Please open app to load words")
             views.setTextViewText(R.id.word_index, "0/0")
+            views.setViewVisibility(R.id.show_explanation_button, View.GONE)
         }
 
         // 设置按钮点击事件
         views.setOnClickPendingIntent(
             R.id.next_button,
             getPendingSelfIntent(context, ACTION_NEXT_WORD)
+        )
+        
+        // 设置显示/隐藏解析按钮点击事件
+        views.setOnClickPendingIntent(
+            R.id.show_explanation_button,
+            getPendingSelfIntent(context, ACTION_TOGGLE_EXPLANATION)
         )
         
         // 设置设置按钮点击跳转到 MainActivity

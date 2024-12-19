@@ -5,7 +5,6 @@ import com.ljchengx.eudic.data.AppDatabase
 import com.ljchengx.eudic.data.dao.RequestRecordDao
 import com.ljchengx.eudic.data.dao.WordDao
 import com.ljchengx.eudic.data.dao.WordbookDao
-import com.ljchengx.eudic.data.repository.WordRepository
 import com.ljchengx.eudic.network.WordService
 import dagger.Module
 import dagger.Provides
@@ -42,16 +41,5 @@ object AppModule {
     @Singleton
     fun provideWordService(): WordService {
         return WordService()
-    }
-
-    @Provides
-    @Singleton
-    fun provideWordRepository(
-        wordDao: WordDao,
-        requestRecordDao: RequestRecordDao,
-        wordbookDao: WordbookDao,
-        wordService: WordService
-    ): WordRepository {
-        return WordRepository(wordDao, requestRecordDao, wordbookDao, wordService)
     }
 } 

@@ -26,6 +26,9 @@
         <action
             android:id="@+id/action_profileFragment_to_wordbookSettingFragment"
             app:destination="@id/wordbookSettingFragment" />
+        <action
+            android:id="@+id/action_profileFragment_to_widgetSettingFragment"
+            app:destination="@id/widgetSettingFragment" />
     </fragment>
 
     <fragment
@@ -41,5 +44,10 @@
             android:id="@+id/action_wordbookSettingFragment_to_tokenSettingFragment"
             app:destination="@id/tokenSettingFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/widgetSettingFragment"
+        android:name="com.ljchengx.eudic.ui.widget.WidgetSettingFragment"
+        android:label="小组件设置" />
 
 </navigation> 
