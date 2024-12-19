@@ -3,15 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@android:color/white"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="12dp">
+    android:layout_marginVertical="4dp"
+    android:background="@drawable/bg_word_item"
+    android:elevation="2dp"
+    android:padding="16dp">
 
     <TextView
         android:id="@+id/wordText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#000000"
+        android:textColor="#333333"
         android:textSize="17sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
@@ -27,13 +28,5 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/wordText" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="0.5dp"
-        android:layout_marginTop="12dp"
-        android:background="#E5E5EA"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/explanationText" />
 
 </androidx.constraintlayout.widget.ConstraintLayout> 

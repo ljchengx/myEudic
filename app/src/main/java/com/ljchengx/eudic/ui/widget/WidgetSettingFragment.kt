@@ -50,13 +50,14 @@ class WidgetSettingFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        binding.filterDaysGroup.addOnButtonCheckedListener { group, checkedId, isChecked ->
+        binding.filterDaysGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked && isSettingInitialized) {  // 只在初始化完成后处理选中事件
                 val days = when (checkedId) {
+                    binding.allDays.id -> 0
                     binding.oneDay.id -> 1
                     binding.twoDays.id -> 2
                     binding.threeDays.id -> 3
-                    else -> 1
+                    else -> 0
                 }
                 viewModel.updateFilterDays(days)
                 updateWidget()
@@ -93,10 +94,11 @@ class WidgetSettingFragment : Fragment() {
     private fun applySettings(settings: WidgetSettings) {
         // 设置过滤天数
         val buttonId = when (settings.filterDays) {
+            0 -> binding.allDays.id
             1 -> binding.oneDay.id
             2 -> binding.twoDays.id
             3 -> binding.threeDays.id
-            else -> binding.oneDay.id
+            else -> binding.allDays.id
         }
         binding.filterDaysGroup.check(buttonId)
 

@@ -1,0 +1,9 @@
+1|docs: Update README with comprehensive documentation
+2|
+3|Update both English and Chinese README files with:
+4|- Reorganize features into widget and core categories
+5|- Add detailed technical stack information
+6|- Update dependencies with specific versions
+7|- Add installation and usage instructions
+8|- Add version history
+9|- Add license and contact information 

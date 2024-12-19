@@ -1,0 +1,11 @@
+1|git tag -a v1.1.0 -m "Release v1.1.0: Enhanced widget with explanation toggle
+2|
+3|New Features:
+4|- Add explanation visibility toggle
+5|- Optimized widget layout with centered visibility control
+6|- Improved widget UI/UX
+7|
+8|Improvements:
+9|- Better button spacing and positioning
+10|- Pre-tinted icons for better compatibility
+11|- Refined widget layout and margins" 

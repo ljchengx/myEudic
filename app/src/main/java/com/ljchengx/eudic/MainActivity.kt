@@ -1,6 +1,7 @@
 package com.ljchengx.eudic
 
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
@@ -22,6 +23,18 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment = supportFragmentManager
             .findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
-        binding.bottomNavigation.setupWithNavController(navController)
+        binding.bottomNav.setupWithNavController(navController)
+
+        // 监听导航事件，控制底部导航栏的显示和隐藏
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            when (destination.id) {
+                R.id.wordsFragment, R.id.profileFragment -> {
+                    binding.bottomNav.visibility = View.VISIBLE
+                }
+                else -> {
+                    binding.bottomNav.visibility = View.GONE
+                }
+            }
+        }
     }
 } 

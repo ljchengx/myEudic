@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.view.View
 import android.widget.RemoteViews
+import com.elvishew.xlog.XLog
 import com.ljchengx.eudic.MainActivity
 import com.ljchengx.eudic.R
 import com.ljchengx.eudic.data.entity.WordEntity
@@ -33,17 +34,19 @@ class WordWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
+        XLog.d("小组件 onUpdate 被调用")
         updateWidgetData(context, appWidgetManager, appWidgetIds)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
+        XLog.d("小组件 onReceive 被调用: ${intent.action}")
         
         when (intent.action) {
             ACTION_NEXT_WORD -> {
                 if (words.isNotEmpty()) {
                     currentWordIndex = (currentWordIndex + 1) % words.size
-                    isExplanationVisible = false // 重置解析显示状态
+                    isExplanationVisible = false
                     val appWidgetManager = AppWidgetManager.getInstance(context)
                     val appWidgetIds = appWidgetManager.getAppWidgetIds(
                         intent.component
@@ -75,18 +78,27 @@ class WordWidget : AppWidgetProvider() {
         appWidgetIds: IntArray
     ) {
         scope.launch {
-            // 获取设置
-            val settings = WordWidgetManager.getSettings(context)
-            
-            // 从数据库获取单词
-            words = WordWidgetManager.getAllWords(context).firstOrNull() ?: emptyList()
-            // 重置索引和解析显示状态
-            if (currentWordIndex >= words.size) {
-                currentWordIndex = 0
+            try {
+                XLog.d("开始更新小组件数据")
+                // 获取设置
+                val settings = WordWidgetManager.getSettings(context)
+                XLog.d("获取到小组件设置: $settings")
+                
+                // 从数据库获取单词
+                words = WordWidgetManager.getAllWords(context)
+                XLog.d("获取到单词列表，数量: ${words.size}")
+                
+                // 重置索引和解析显示状态
+                if (currentWordIndex >= words.size) {
+                    currentWordIndex = 0
+                }
+                isExplanationVisible = false
+                
+                // 更新所有小组件
+                updateWidgetViews(context, appWidgetManager, appWidgetIds)
+            } catch (e: Exception) {
+                XLog.e("更新小组件数据失败", e)
             }
-            isExplanationVisible = false
-            // 更新所有小组件
-            updateWidgetViews(context, appWidgetManager, appWidgetIds)
         }
     }
 
@@ -96,10 +108,15 @@ class WordWidget : AppWidgetProvider() {
         appWidgetIds: IntArray
     ) {
         scope.launch {
-            val settings = WordWidgetManager.getSettings(context)
-            
-            appWidgetIds.forEach { appWidgetId ->
-                updateAppWidget(context, appWidgetManager, appWidgetId, settings)
+            try {
+                XLog.d("开始更新小组件视图")
+                val settings = WordWidgetManager.getSettings(context)
+                
+                appWidgetIds.forEach { appWidgetId ->
+                    updateAppWidget(context, appWidgetManager, appWidgetId, settings)
+                }
+            } catch (e: Exception) {
+                XLog.e("更新小组件视图失败", e)
             }
         }
     }
@@ -113,6 +130,7 @@ class WordWidget : AppWidgetProvider() {
         val views = RemoteViews(context.packageName, R.layout.word)
         
         if (words.isNotEmpty()) {
+            XLog.d("更新小组件UI，当前单词索引: $currentWordIndex")
             val currentWord = words[currentWordIndex]
             
             // 更新UI
@@ -135,6 +153,7 @@ class WordWidget : AppWidgetProvider() {
                 "${currentWordIndex + 1}/${words.size}"
             )
         } else {
+            XLog.d("没有单词数据，显示提示信息")
             // 没有单词时显示提示
             views.setTextViewText(R.id.word_text, "No Words")
             views.setTextViewText(R.id.meaning_text, "Please open app to load words")

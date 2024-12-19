@@ -29,7 +29,7 @@ class WidgetSettingsRepositoryImpl @Inject constructor(
 
     override fun getSettings(): Flow<WidgetSettings> = context.dataStore.data.map { preferences ->
         WidgetSettings(
-            filterDays = preferences[PreferencesKeys.FILTER_DAYS] ?: 1,
+            filterDays = preferences[PreferencesKeys.FILTER_DAYS] ?: 0,
             isRandomOrder = preferences[PreferencesKeys.IS_RANDOM_ORDER] ?: false,
             hideExplanation = preferences[PreferencesKeys.HIDE_EXPLANATION] ?: false
         )

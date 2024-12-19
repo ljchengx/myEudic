@@ -1,18 +1,25 @@
 package com.ljchengx.eudic.ui.words
 
+import android.app.PendingIntent
+import android.app.PendingIntent.FLAG_UPDATE_CURRENT
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.appwidget.AppWidgetManager
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.elvishew.xlog.XLog
 import com.google.android.material.snackbar.Snackbar
 import com.ljchengx.eudic.R
 import com.ljchengx.eudic.databinding.FragmentWordsBinding
+import com.ljchengx.eudic.widget.WordWidget
+import com.elvishew.xlog.XLog
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -83,8 +90,35 @@ class WordsFragment : Fragment() {
     private fun refreshWords() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
+                XLog.d("开始刷新单词列表")
+                // 刷新单词列表
                 viewModel.refreshWords()
                 Snackbar.make(binding.root, "刷新成功", Snackbar.LENGTH_SHORT).show()
+                XLog.d("单词列表刷新成功")
+                
+                // 等待一小段时间确保数据库更新完成
+                kotlinx.coroutines.delay(1000)
+                XLog.d("开始更新小组件")
+                
+                // 更新小组件
+                val context = requireContext()
+                val appWidgetManager = AppWidgetManager.getInstance(context)
+                val componentName = ComponentName(context, WordWidget::class.java)
+                val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+                
+                if (appWidgetIds.isEmpty()) {
+                    XLog.d("没有找到已添加的小组件")
+                    return@launch
+                }
+                
+                XLog.d("找到 ${appWidgetIds.size} 个小组件，发送更新广播")
+                val intent = Intent(context, WordWidget::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                }
+                context.sendBroadcast(intent)
+                XLog.d("小组件更新广播已发送")
+                
             } catch (e: Exception) {
                 XLog.e("刷新单词列表失败", e)
                 when (e) {
@@ -100,11 +134,14 @@ class WordsFragment : Fragment() {
                             "No wordbook selected" -> {
                                 viewLifecycleOwner.lifecycleScope.launch {
                                     try {
+                                        XLog.d("尝试刷新单词本列表")
                                         // 尝试刷新单词本列表
                                         viewModel.refreshWordbooks()
                                         // 再次尝试刷新单词列表
                                         viewModel.refreshWords()
+                                        XLog.d("单词本和单词列表刷新成功")
                                     } catch (e2: Exception) {
+                                        XLog.e("刷新单词本和单词列表失败", e2)
                                         // 如果还是失败，提示用户去选择单词本
                                         Snackbar.make(binding.root, "请先选择单词本", Snackbar.LENGTH_LONG)
                                             .setAction("去选择") {
